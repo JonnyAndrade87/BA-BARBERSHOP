@@ -5,3 +5,4 @@ Thumbs.db
 .env.local
 node_modules/
 barbershop-landing-51.aura.build/
+.vercel
