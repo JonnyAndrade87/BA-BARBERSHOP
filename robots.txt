@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://babarbershop.com.br/sitemap.xml

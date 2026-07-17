@@ -1,0 +1,14 @@
+{
+  "name": "BA Barbershop — Barbearia Arlindo",
+  "short_name": "BA Barbershop",
+  "description": "Barbearia em Planta Araçatuba, Piraquara/PR. Corte, barba na navalha e degradê. Agende pelo WhatsApp.",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020D1C",
+  "theme_color": "#020D1C",
+  "icons": [
+    { "src": "favicon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
