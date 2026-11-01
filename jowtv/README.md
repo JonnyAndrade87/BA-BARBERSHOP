@@ -12,7 +12,9 @@ Roda no seu computador e pode ser aberta **no próprio PC, no celular, no tablet
 2. Extraia esta pasta em qualquer lugar do computador.
 3. Inicie:
    - **Windows:** dê dois cliques em `iniciar.bat`.
-   - **Mac / Linux:** no terminal, rode `./iniciar.sh` (ou `node server.js`).
+   - **Mac:** dê dois cliques em `iniciar.command`. Na primeira vez, se o macOS bloquear, clique com o botão
+     direito no arquivo → **Abrir** → **Abrir** (ou em Ajustes do Sistema → Privacidade e Segurança → **Abrir Mesmo Assim**).
+   - **Linux:** no terminal, rode `./iniciar.sh` (ou `node server.js`).
 4. O navegador abre em <http://localhost:8080>. Na primeira vez, o catálogo leva alguns segundos para baixar.
 
 Não precisa instalar nenhuma dependência (sem `npm install`).
