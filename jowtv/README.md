@@ -36,15 +36,19 @@ Não precisa instalar nenhuma dependência (sem `npm install`).
 
 ## Recursos
 
-- Página inicial com fileiras: Brasil, Portugal, Filmes, Séries, Esportes, Notícias, Infantil, Animação, Música…
-- Todas as 29 categorias e filtro por país (180+ países)
-- Busca por nome do canal
-- Favoritos e "assistidos recentemente" (salvos no navegador)
-- Player com várias fontes por canal e troca automática quando uma fonte falha
-- Setas ← → (ou Channel Up/Down do controle) para trocar de canal; `F` para tela cheia; `Esc` para fechar
-- Botão "Copiar link" para abrir o canal no VLC
+- Visual inspirado no tvOS: fundo preto, vidro fosco, carrossel de destaques em tela cheia e prateleiras de
+  cards com efeito de foco (o card cresce, inclina e brilha)
+- Prateleiras: Continuar assistindo, Minha lista, Brasil, Portugal, Filmes, Séries, Esportes, Notícias, Infantil…
+- Todas as categorias, filtro por país (180+ países) e busca com sugestões
+- Player em tela cheia com controles próprios que se escondem sozinhos: canal anterior/próximo, pausar,
+  volume, Picture-in-Picture, tela cheia, Minha lista e lista de fontes do sinal
+- Troca automática de fonte quando uma falha
+- No celular: barra de abas embaixo, como em um app de iPhone
+- **Controle remoto / teclado:** setas navegam entre os itens, Enter abre, Esc volta.
+  No player: ← → trocam de canal, espaço pausa, `M` tira o som, `F` tela cheia, `I` fontes do sinal
+- Botão para copiar o link do canal e abrir no VLC
 - QR code para abrir no celular / TV com um toque
-- Configurações: só HD, conteúdo adulto (desligado por padrão), streams não catalogados, proxy
+- Ajustes: só HD, conteúdo adulto (desligado por padrão), streams não catalogados, proxy
 
 ## Como funciona
 

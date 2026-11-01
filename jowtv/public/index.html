@@ -2,31 +2,41 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b0d12">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>JOWTV</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#inicio" aria-label="Início">
-      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="7" width="26" height="18" rx="4" fill="currentColor"/><path d="M13 12.5v7l6-3.5z" fill="#0b0d12"/><path d="M11 3l5 4 5-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+  <!-- Barra superior -->
+  <header class="nav" id="nav">
+    <a class="brand" href="#inicio" aria-label="JOWTV - Início">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="7" width="28" height="19" rx="5" fill="currentColor"/><path d="M13.5 12.5v8l7-4z" fill="#000"/><path d="M11 3l5 4 5-4" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>JOW<b>TV</b></span>
     </a>
-    <nav class="tabs" id="tabs" aria-label="Seções"></nav>
-    <div class="tools">
-      <label class="search">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2" fill="none"/><path d="M20 20l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        <input id="search" type="search" placeholder="Buscar canal..." autocomplete="off" aria-label="Buscar canal">
+    <nav class="pill-nav" id="tabs" aria-label="Seções"></nav>
+    <div class="nav-actions">
+      <a class="glass-icon nav-search" href="#buscar" title="Buscar" aria-label="Buscar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/></svg>
+      </a>
+      <label class="country-pill" title="Filtrar por país">
+        <span id="countryFlag" aria-hidden="true">🌍</span>
+        <select id="country" aria-label="País"><option value="">Todos os países</option></select>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
       </label>
-      <select id="country" aria-label="País"><option value="">🌍 Todos os países</option></select>
-      <button class="icon-btn phone-btn" id="connectBtn" title="Assistir no celular / TV" aria-label="Assistir no celular ou TV">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <button class="glass-icon" id="connectBtn" title="Assistir no celular ou TV" aria-label="Assistir no celular ou TV">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></svg>
       </button>
-      <button class="icon-btn" id="settingsBtn" title="Configurações" aria-label="Configurações">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+      <button class="glass-icon" id="settingsBtn" title="Ajustes" aria-label="Ajustes">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
       </button>
     </div>
   </header>
@@ -34,68 +44,126 @@
   <main id="main">
     <div class="loading" id="loading">
       <div class="spinner"></div>
-      <p>Carregando milhares de canais...</p>
-      <small>Na primeira vez pode levar alguns segundos.</small>
+      <p>Carregando canais…</p>
     </div>
   </main>
 
+  <!-- Barra de abas (celular) -->
+  <nav class="tabbar" id="tabbar" aria-label="Navegação">
+    <a href="#inicio" data-tab="inicio"><svg viewBox="0 0 24 24"><path d="M3.5 10.5L12 3.5l8.5 7V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/></svg><span>Início</span></a>
+    <a href="#todos" data-tab="todos"><svg viewBox="0 0 24 24"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M8 21.5h8M9 2.5l3 3 3-3"/></svg><span>Ao vivo</span></a>
+    <a href="#categorias" data-tab="categorias"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg><span>Categorias</span></a>
+    <a href="#buscar" data-tab="buscar"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.6-4.6"/></svg><span>Buscar</span></a>
+    <a href="#favoritos" data-tab="favoritos"><svg viewBox="0 0 24 24"><path d="M12 20.5s-8-4.6-8-10.4A4.4 4.4 0 0 1 12 7.6a4.4 4.4 0 0 1 8 2.5c0 5.8-8 10.4-8 10.4z"/></svg><span>Minha lista</span></a>
+  </nav>
+
   <!-- Player -->
   <div class="player" id="player" hidden role="dialog" aria-modal="true" aria-label="Player">
-    <div class="player-inner">
-      <div class="video-wrap">
-        <video id="video" controls playsinline autoplay></video>
-        <div class="video-status" id="videoStatus"></div>
-        <button class="nav-arrow prev" id="prevCh" title="Canal anterior (←)" aria-label="Canal anterior">‹</button>
-        <button class="nav-arrow next" id="nextCh" title="Próximo canal (→)" aria-label="Próximo canal">›</button>
+    <video id="video" playsinline autoplay></video>
+    <div class="pl-shade" aria-hidden="true"></div>
+    <div class="pl-status" id="videoStatus" role="status"></div>
+
+    <div class="pl-top">
+      <button class="glass-icon big" id="closePlayer" title="Voltar (Esc)" aria-label="Voltar">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="pl-title">
+        <div class="pl-logo" id="piLogo"></div>
+        <div>
+          <h2 id="piName"></h2>
+          <p id="piMeta"></p>
+        </div>
       </div>
-      <aside class="player-info">
-        <div class="pi-head">
-          <div class="pi-logo" id="piLogo"></div>
-          <div>
-            <h2 id="piName"></h2>
-            <p id="piMeta"></p>
-          </div>
-          <button class="icon-btn close" id="closePlayer" title="Fechar (Esc)" aria-label="Fechar">✕</button>
-        </div>
-        <div class="pi-actions">
-          <button class="btn" id="favBtn">☆ Favoritar</button>
-          <button class="btn ghost" id="copyBtn">Copiar link (VLC)</button>
-        </div>
-        <h3>Fontes do sinal</h3>
-        <div class="sources" id="sources"></div>
-        <p class="hint">Se o canal não abrir, o player tenta a próxima fonte automaticamente. Alguns canais só funcionam em certos países.</p>
-      </aside>
     </div>
+
+    <div class="pl-bottom">
+      <div class="pl-bar glass">
+        <div class="pl-group">
+          <button class="pl-btn" id="prevCh" title="Canal anterior (←)" aria-label="Canal anterior">
+            <svg viewBox="0 0 24 24"><path d="M6 5v14" /><path d="M19 5.5v13L9 12z" class="fill"/></svg>
+          </button>
+          <button class="pl-btn main" id="playBtn" title="Reproduzir / pausar (espaço)" aria-label="Reproduzir ou pausar">
+            <svg viewBox="0 0 24 24" class="ic-pause"><rect x="6" y="5" width="4" height="14" rx="1" class="fill"/><rect x="14" y="5" width="4" height="14" rx="1" class="fill"/></svg>
+            <svg viewBox="0 0 24 24" class="ic-play"><path d="M7 4.5v15l12.5-7.5z" class="fill"/></svg>
+          </button>
+          <button class="pl-btn" id="nextCh" title="Próximo canal (→)" aria-label="Próximo canal">
+            <svg viewBox="0 0 24 24"><path d="M18 5v14" /><path d="M5 5.5v13L15 12z" class="fill"/></svg>
+          </button>
+        </div>
+        <div class="pl-live"><span class="dot"></span>AO VIVO</div>
+        <div class="pl-spacer"></div>
+        <div class="pl-group">
+          <button class="pl-btn" id="favBtn" title="Minha lista" aria-label="Adicionar à minha lista">
+            <svg viewBox="0 0 24 24" class="ic-add"><path d="M12 5v14M5 12h14"/></svg>
+            <svg viewBox="0 0 24 24" class="ic-check"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          </button>
+          <button class="pl-btn" id="infoBtn" title="Fontes do sinal (i)" aria-label="Fontes do sinal">
+            <svg viewBox="0 0 24 24"><path d="M4 6.5h16M4 12h16M4 17.5h10"/></svg>
+          </button>
+          <button class="pl-btn" id="copyBtn" title="Copiar link para o VLC" aria-label="Copiar link">
+            <svg viewBox="0 0 24 24"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1"/><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1"/></svg>
+          </button>
+          <div class="pl-vol">
+            <button class="pl-btn" id="muteBtn" title="Som (m)" aria-label="Ativar ou desativar som">
+              <svg viewBox="0 0 24 24" class="ic-vol"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" class="fill"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+              <svg viewBox="0 0 24 24" class="ic-mute"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" class="fill"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+            </button>
+            <input type="range" id="volume" min="0" max="1" step="0.05" aria-label="Volume">
+          </div>
+          <button class="pl-btn" id="pipBtn" title="Picture-in-Picture" aria-label="Picture-in-Picture">
+            <svg viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="2.5"/><rect x="12" y="11.5" width="7" height="5" rx="1" class="fill"/></svg>
+          </button>
+          <button class="pl-btn" id="fsBtn" title="Tela cheia (f)" aria-label="Tela cheia">
+            <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <aside class="pl-sources glass" id="sourcesPanel" hidden>
+      <h3>Fontes do sinal</h3>
+      <div class="sources" id="sources"></div>
+      <p class="hint">Se uma fonte falhar, o JOWTV tenta a próxima automaticamente. Alguns canais só funcionam em certos países.</p>
+    </aside>
   </div>
 
-  <!-- Configurações -->
-  <div class="modal" id="settings" hidden role="dialog" aria-modal="true" aria-label="Configurações">
-    <div class="modal-box">
-      <h2>Configurações</h2>
-      <label class="switch"><input type="checkbox" id="optProxy"><span>Usar proxy do servidor <small>(recomendado: faz mais canais funcionarem)</small></span></label>
-      <label class="switch"><input type="checkbox" id="optHd"><span>Mostrar só canais HD (720p ou mais)</span></label>
-      <label class="switch"><input type="checkbox" id="optExtra"><span>Incluir streams sem cadastro <small>(canais não catalogados)</small></span></label>
-      <label class="switch"><input type="checkbox" id="optNsfw"><span>Mostrar conteúdo adulto (+18)</span></label>
-      <div class="modal-foot">
-        <span id="catalogInfo"></span>
-        <div>
-          <button class="btn ghost" id="refreshBtn">Atualizar catálogo</button>
-          <button class="btn" id="closeSettings">Fechar</button>
-        </div>
+  <!-- Ajustes -->
+  <div class="sheet" id="settings" hidden role="dialog" aria-modal="true" aria-label="Ajustes">
+    <div class="sheet-box glass">
+      <div class="sheet-head">
+        <h2>Ajustes</h2>
+        <button class="sheet-done" id="closeSettings">OK</button>
+      </div>
+      <div class="group-title">Reprodução</div>
+      <div class="group">
+        <label class="toggle-row"><span>Usar proxy do servidor<small>Faz mais canais funcionarem. Recomendado.</small></span><input type="checkbox" id="optProxy"><i></i></label>
+      </div>
+      <div class="group-title">Conteúdo</div>
+      <div class="group">
+        <label class="toggle-row"><span>Somente canais HD<small>720p ou melhor</small></span><input type="checkbox" id="optHd"><i></i></label>
+        <label class="toggle-row"><span>Streams sem cadastro<small>Canais ainda não catalogados</small></span><input type="checkbox" id="optExtra"><i></i></label>
+        <label class="toggle-row"><span>Conteúdo adulto (+18)</span><input type="checkbox" id="optNsfw"><i></i></label>
+      </div>
+      <div class="group-title">Catálogo</div>
+      <div class="group">
+        <button class="row-btn" id="refreshBtn">Atualizar catálogo agora</button>
+        <div class="row-info" id="catalogInfo"></div>
       </div>
     </div>
   </div>
 
   <!-- Assistir no celular / TV -->
-  <div class="modal" id="connect" hidden role="dialog" aria-modal="true" aria-label="Assistir no celular ou TV">
-    <div class="modal-box connect-box">
-      <button class="icon-btn close" id="closeConnect" title="Fechar" aria-label="Fechar">✕</button>
-      <h2>📱 Assistir no celular ou TV</h2>
+  <div class="sheet" id="connect" hidden role="dialog" aria-modal="true" aria-label="Assistir no celular ou TV">
+    <div class="sheet-box glass connect-box">
+      <div class="sheet-head">
+        <h2>Assistir em outro aparelho</h2>
+        <button class="sheet-done" id="closeConnect">OK</button>
+      </div>
       <div class="connect-body" id="connectBody"></div>
     </div>
   </div>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="toast glass" id="toast" role="status" aria-live="polite"></div>
 
   <script src="vendor/hls.min.js"></script>
   <script src="vendor/qrcode.js"></script>
