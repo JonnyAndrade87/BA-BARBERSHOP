@@ -57,7 +57,7 @@ const state = {
   countries: new Map(), // code -> {name, flag}
   categories: [],
   updatedAt: 0,
-  settings: Object.assign({ proxy: true, hd: false, extra: false, nsfw: false }, store.get('settings', {})),
+  settings: Object.assign({ proxy: true, hd: false, extra: false, nsfw: false, theme: 'light', livePreviews: true, heroVideo: true }, store.get('settings', {})),
   favs: new Set(store.get('favs', [])),
   recent: store.get('recent', []),
   country: store.get('country', ''),
@@ -207,10 +207,13 @@ function sortList(list) {
 function cardHtml(ch, opts = {}) {
   const q = qualityTag(bestQuality(ch));
   const meta = [ch.c ? countryName(ch.c) : '', catName(ch.k[0])].filter(Boolean).join(' · ');
+  const live = state.settings.livePreviews ? thumbFresh(ch.id) : null;
   return `<button class="card" data-id="${esc(ch.id)}" aria-label="${esc(ch.n)}">
-    <div class="art" style="--h:${hueFor(ch.n)}">
+    <div class="art ${live ? 'has-live' : ''}" style="--h:${hueFor(ch.n)}">
       ${ch.g ? `<img class="art-blur" src="${esc(ch.g)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" aria-hidden="true">` : ''}
+      ${live ? `<img class="art-live" src="${live.url}" alt="" decoding="async">` : ''}
       <div class="art-logo">${logoHtml(ch)}</div>
+      <span class="live-chip">AO VIVO</span>
       ${q ? `<span class="q">${q}</span>` : ''}
       ${state.favs.has(ch.id) ? `<span class="heart">${ICON.heart}</span>` : ''}
       ${opts.live ? '<span class="live-bar"></span>' : ''}
@@ -291,8 +294,12 @@ function heroHtml(list) {
   const slides = list.map((ch, i) => {
     const q = qualityTag(bestQuality(ch));
     const fav = state.favs.has(ch.id);
-    return `<div class="hero-slide ${i === 0 ? 'on' : ''}" data-i="${i}" style="--h:${hueFor(ch.n)}">
-      <div class="hero-bg">${ch.g ? `<img class="hero-blur" src="${esc(ch.g)}" alt="" aria-hidden="true" referrerpolicy="no-referrer">` : ''}</div>
+    const live = state.settings.livePreviews ? thumbFresh(ch.id) : null;
+    return `<div class="hero-slide ${i === 0 ? 'on' : ''} ${live ? 'has-still' : ''}" data-i="${i}" data-id="${esc(ch.id)}" style="--h:${hueFor(ch.n)}">
+      <div class="hero-bg">${ch.g ? `<img class="hero-blur" src="${esc(ch.g)}" alt="" aria-hidden="true" referrerpolicy="no-referrer">` : ''}
+        <img class="hero-still" alt="" ${live ? `src="${live.url}"` : ''}>
+        <video class="hero-video" muted playsinline preload="none"></video>
+      </div>
       <div class="hero-art">${logoHtml(ch, false)}</div>
       <div class="hero-content">
         <div class="eyebrow"><span class="live-dot"></span>Ao vivo agora · ${esc(catName(ch.k[0]))}</div>
@@ -315,7 +322,7 @@ function heroHtml(list) {
        <button class="hero-arrow prev" data-slide-step="-1" tabindex="-1" aria-label="Anterior">${ICON.chevronL}</button>
        <button class="hero-arrow next" data-slide-step="1" tabindex="-1" aria-label="Próximo">${ICON.chevron}</button>`
     : '';
-  return `<section class="hero" id="hero">${slides}${dots}</section>`;
+  return `<section class="hero on-dark" id="hero">${slides}${dots}</section>`;
 }
 
 function showSlide(i) {
@@ -326,9 +333,10 @@ function showSlide(i) {
   state.hero.idx = (i + n) % n;
   $$('.hero-slide', hero).forEach((s, k) => s.classList.toggle('on', k === state.hero.idx));
   $$('.hero-dots button', hero).forEach((d, k) => d.classList.toggle('on', k === state.hero.idx));
+  scheduleHeroVideo();
 }
 
-function stopHero() { clearInterval(state.hero.timer); state.hero.timer = null; }
+function stopHero() { clearInterval(state.hero.timer); state.hero.timer = null; stopHeroVideo(); }
 function startHero() {
   stopHero();
   if (state.hero.ids.length < 2) return;
@@ -336,6 +344,7 @@ function startHero() {
     const hero = $('#hero');
     if (!hero) return stopHero();
     if (document.hidden || !playerEl.hidden || hero.matches(':hover') || hero.contains(document.activeElement)) return;
+    if (heroVid.startedAt && Date.now() - heroVid.startedAt < 24000) return; // deixa o vídeo ao vivo rodar um pouco
     showSlide(state.hero.idx + 1);
   }, HERO_INTERVAL);
 }
@@ -384,6 +393,7 @@ function renderHome() {
   if (!vis.length) html += `<div class="page">${emptyHtml()}</div>`;
   main.innerHTML = html;
   startHero();
+  scheduleHeroVideo();
 }
 
 function renderCategories() {
@@ -418,6 +428,7 @@ function appendGrid() {
   g.pos += slice.length;
   grid.insertAdjacentHTML('beforeend', slice.map((c) => cardHtml(c)).join(''));
   if (g.pos >= g.list.length) $('#sentinel')?.remove();
+  observeThumbs();
 }
 
 function renderGrid(title, list, opts = {}) {
@@ -514,6 +525,8 @@ function route(keepScroll = false) {
   }
   window.scrollTo(0, keepScroll ? y : 0);
   updateNavBg();
+  resetThumbObserver();
+  observeThumbs();
   if (hash === 'buscar' && !keepScroll && matchMedia('(hover: hover)').matches) $('#searchInput')?.focus();
 }
 
@@ -693,6 +706,7 @@ function openChannel(id, playlist) {
   playerEl.hidden = false;
   document.body.style.overflow = 'hidden';
   stopHero();
+  stopHeroVideo();
 
   $('#piLogo').innerHTML = logoHtml(ch, false);
   $('#piName').textContent = ch.n;
@@ -817,6 +831,7 @@ function closePlayer() {
   if (document.pictureInPictureElement) document.exitPictureInPicture().catch(() => {});
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   if (currentHash() === 'inicio') route(true); // atualiza "Continuar assistindo"
+  pumpThumbs();
   const back = state.lastFocusId && $(`.card[data-id="${CSS.escape(state.lastFocusId)}"]`);
   if (back) back.focus({ preventScroll: true });
 }
@@ -913,6 +928,272 @@ playerEl.addEventListener('click', (e) => {
   } else togglePlay();
 });
 video.addEventListener('dblclick', toggleFullscreen);
+
+// ---------------------------------------------------------------------------
+// Miniaturas ao vivo e vídeo do destaque
+// ---------------------------------------------------------------------------
+// O navegador abre o stream (pelo proxy, para poder ler os pixels), captura um quadro,
+// mostra na miniatura e envia para o servidor, que compartilha com os outros aparelhos.
+
+const THUMB_TTL = 10 * 60 * 1000;
+const THUMB_FAIL_TTL = 10 * 60 * 1000;
+const thumbs = {
+  mem: new Map(), // id -> { url, t }
+  failed: new Map(), // id -> quando falhou
+  queue: [],
+  queued: new Set(),
+  active: 0,
+  max: matchMedia('(hover: hover)').matches ? 3 : 2,
+};
+const canCapture = () => !!(window.Hls && Hls.isSupported()) || !!document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
+
+function thumbFresh(id) {
+  const t = thumbs.mem.get(id);
+  return t && Date.now() - t.t < THUMB_TTL ? t : null;
+}
+
+function proxied(s) {
+  let u = 'proxy?url=' + encodeURIComponent(s.u);
+  if (s.ua) u += '&ua=' + encodeURIComponent(s.ua);
+  if (s.r) u += '&ref=' + encodeURIComponent(s.r);
+  return u;
+}
+
+function applyThumb(id) {
+  const t = thumbFresh(id);
+  if (!t || !state.settings.livePreviews) return;
+  $$(`.card[data-id="${CSS.escape(id)}"] .art`).forEach((art) => {
+    let img = $('.art-live', art);
+    if (!img) {
+      img = document.createElement('img');
+      img.className = 'art-live';
+      img.alt = '';
+      img.decoding = 'async';
+      $('.art-logo', art).before(img);
+    }
+    if (img.getAttribute('src') === t.url) return art.classList.add('has-live');
+    img.onload = () => art.classList.add('has-live');
+    img.src = t.url;
+  });
+  $$(`.hero-slide[data-id="${CSS.escape(id)}"]`).forEach((slide) => {
+    const still = $('.hero-still', slide);
+    if (still.getAttribute('src') === t.url) return slide.classList.add('has-still');
+    still.onload = () => slide.classList.add('has-still');
+    still.src = t.url;
+  });
+}
+
+function setThumb(id, blob, upload) {
+  const old = thumbs.mem.get(id);
+  thumbs.mem.delete(id);
+  thumbs.mem.set(id, { url: URL.createObjectURL(blob), t: Date.now() });
+  if (old) setTimeout(() => URL.revokeObjectURL(old.url), 5000);
+  while (thumbs.mem.size > 400) {
+    const [k, v] = thumbs.mem.entries().next().value;
+    thumbs.mem.delete(k);
+    URL.revokeObjectURL(v.url);
+  }
+  applyThumb(id);
+  if (upload) {
+    fetch('api/thumb?id=' + encodeURIComponent(id), { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: blob }).catch(() => {});
+  }
+}
+
+let thumbLab;
+function captureFrame(s) {
+  return new Promise((resolve) => {
+    if (!thumbLab) {
+      thumbLab = document.createElement('div');
+      thumbLab.setAttribute('aria-hidden', 'true');
+      thumbLab.style.cssText = 'position:fixed;right:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none;overflow:hidden;z-index:-1';
+      document.body.appendChild(thumbLab);
+    }
+    const v = document.createElement('video');
+    v.muted = true;
+    v.playsInline = true;
+    v.setAttribute('playsinline', '');
+    v.style.cssText = 'width:2px;height:2px';
+    thumbLab.appendChild(v);
+    let hls = null;
+    let done = false;
+    let tries = 0;
+    let busy = false;
+    const finish = (blob) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      if (hls) hls.destroy();
+      v.removeAttribute('src');
+      v.load();
+      v.remove();
+      resolve(blob || null);
+    };
+    const timer = setTimeout(() => finish(null), 15000);
+    const grab = () => {
+      if (!v.videoWidth || !v.videoHeight) return false;
+      const W = 480;
+      const H = 270;
+      const c = document.createElement('canvas');
+      c.width = W;
+      c.height = H;
+      const ctx = c.getContext('2d', { willReadFrequently: true });
+      const scale = Math.max(W / v.videoWidth, H / v.videoHeight);
+      const dw = v.videoWidth * scale;
+      const dh = v.videoHeight * scale;
+      ctx.drawImage(v, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      let px;
+      try { px = ctx.getImageData(0, 0, W, H).data; } catch { finish(null); return true; }
+      // evita quadros pretos ou chapados (comuns no começo dos streams)
+      let sum = 0; let sum2 = 0; let n = 0;
+      for (let i = 0; i < px.length; i += 4 * 97) {
+        const l = 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+        sum += l; sum2 += l * l; n++;
+      }
+      const avg = sum / n;
+      const sd = Math.sqrt(Math.max(0, sum2 / n - avg * avg));
+      if ((avg < 16 || sd < 6) && tries++ < 8) return false;
+      c.toBlob((b) => finish(b), 'image/jpeg', 0.74);
+      return true;
+    };
+    v.addEventListener('timeupdate', () => {
+      if (busy || done || v.currentTime < 0.5) return;
+      busy = true;
+      if (!grab()) busy = false;
+    });
+    v.addEventListener('error', () => finish(null));
+    const url = proxied(s);
+    if (window.Hls && Hls.isSupported()) {
+      hls = new Hls({ enableWorker: true, startLevel: 0, maxBufferLength: 6, maxMaxBufferLength: 8, backBufferLength: 0, manifestLoadingTimeOut: 8000, fragLoadingTimeOut: 10000 });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+      hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) finish(null); });
+      hls.loadSource(url);
+      hls.attachMedia(v);
+    } else {
+      v.src = url;
+      v.play().catch(() => {});
+    }
+  });
+}
+
+async function getThumb(id) {
+  try {
+    const r = await fetch('api/thumb?id=' + encodeURIComponent(id), { cache: 'no-store' });
+    if (r.status === 200) return setThumb(id, await r.blob(), false);
+  } catch { /* servidor sem miniatura */ }
+  const ch = state.byId.get(id);
+  if (!ch) return;
+  for (const s of ch.s.slice(0, 2)) {
+    if (!state.settings.livePreviews || !playerEl.hidden) return;
+    const blob = await captureFrame(s);
+    if (blob) return setThumb(id, blob, true);
+  }
+  thumbs.failed.set(id, Date.now());
+}
+
+function requestThumb(id, priority = false) {
+  if (!state.settings.livePreviews || !canCapture()) return;
+  if (thumbFresh(id)) return applyThumb(id);
+  const f = thumbs.failed.get(id);
+  if (f && Date.now() - f < THUMB_FAIL_TTL) return;
+  if (thumbs.queued.has(id)) {
+    if (priority) { thumbs.queue = thumbs.queue.filter((x) => x !== id); thumbs.queue.unshift(id); }
+    return;
+  }
+  thumbs.queued.add(id);
+  if (priority) thumbs.queue.unshift(id); else thumbs.queue.push(id);
+  pumpThumbs();
+}
+
+function pumpThumbs() {
+  while (thumbs.active < thumbs.max && thumbs.queue.length && playerEl.hidden && !document.hidden) {
+    const id = thumbs.queue.shift();
+    // ainda está na tela?
+    if (!document.querySelector(`.card[data-id="${CSS.escape(id)}"], .hero-slide[data-id="${CSS.escape(id)}"]`)) {
+      thumbs.queued.delete(id);
+      continue;
+    }
+    thumbs.active++;
+    getThumb(id).catch(() => {}).finally(() => {
+      thumbs.active--;
+      thumbs.queued.delete(id);
+      pumpThumbs();
+    });
+  }
+}
+
+let thumbObserver = null;
+const onScreen = new Set();
+function resetThumbObserver() {
+  if (thumbObserver) thumbObserver.disconnect();
+  thumbObserver = null;
+  onScreen.clear();
+  // tira da fila o que não está mais na página
+  thumbs.queue = thumbs.queue.filter((id) => { const keep = !!document.querySelector(`.card[data-id="${CSS.escape(id)}"]`); if (!keep) thumbs.queued.delete(id); return keep; });
+}
+function observeThumbs() {
+  if (!state.settings.livePreviews || !canCapture()) return;
+  if (!thumbObserver) {
+    thumbObserver = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          onScreen.add(e.target);
+          setTimeout(() => {
+            if (onScreen.has(e.target)) requestThumb(e.target.closest('.card').dataset.id);
+          }, 450);
+        } else onScreen.delete(e.target);
+      }
+    }, { threshold: 0.35, rootMargin: '150px 0px' });
+  }
+  $$('.card .art:not([data-obs])').forEach((a) => { a.dataset.obs = '1'; thumbObserver.observe(a); });
+}
+
+// Vídeo ao vivo (sem som) no destaque
+let heroVid = { hls: null, el: null, timer: null, startedAt: 0 };
+function stopHeroVideo() {
+  clearTimeout(heroVid.timer);
+  if (heroVid.hls) heroVid.hls.destroy();
+  if (heroVid.el) {
+    heroVid.el.closest('.hero-slide')?.classList.remove('has-video');
+    heroVid.el.removeAttribute('src');
+    heroVid.el.load();
+  }
+  heroVid = { hls: null, el: null, timer: null, startedAt: 0 };
+}
+function scheduleHeroVideo() {
+  stopHeroVideo();
+  const id = state.hero.ids[state.hero.idx];
+  if (!id || !$('#hero')) return;
+  requestThumb(id, true);
+  if (!state.settings.heroVideo || !playerEl.hidden || document.hidden) return;
+  heroVid.timer = setTimeout(() => startHeroVideo(id), 1500);
+}
+function startHeroVideo(id) {
+  const slide = $(`.hero-slide.on[data-id="${CSS.escape(id)}"]`);
+  const ch = state.byId.get(id);
+  if (!slide || !ch || !playerEl.hidden) return;
+  const v = $('.hero-video', slide);
+  heroVid.el = v;
+  v.muted = true;
+  v.onplaying = () => { slide.classList.add('has-video'); heroVid.startedAt = Date.now(); };
+  const url = proxied(ch.s[0]);
+  if (window.Hls && Hls.isSupported()) {
+    const h = new Hls({ enableWorker: true, maxBufferLength: 10, backBufferLength: 0, capLevelToPlayerSize: true });
+    heroVid.hls = h;
+    h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
+    h.on(Hls.Events.ERROR, (_, d) => { if (d.fatal && heroVid.hls === h) stopHeroVideo(); });
+    h.loadSource(url);
+    h.attachMedia(v);
+  } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+    v.src = url;
+    v.play().catch(() => {});
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return stopHeroVideo();
+  if ($('#hero') && playerEl.hidden) scheduleHeroVideo();
+  pumpThumbs();
+});
 
 // ---------------------------------------------------------------------------
 // Navegação por setas (controle remoto / teclado)
@@ -1051,8 +1332,10 @@ main.addEventListener('pointerleave', () => { resetTilt(tiltCard); tiltCard = nu
 // ---------------------------------------------------------------------------
 
 function updateNavBg() {
-  const scrolled = window.scrollY > 24 || currentHash() !== 'inicio';
-  $('#nav').classList.toggle('scrolled', scrolled);
+  const hero = $('#hero');
+  const overHero = !!hero && window.scrollY < hero.offsetHeight - 80;
+  $('#nav').classList.toggle('over-hero', overHero);
+  $('#nav').classList.toggle('scrolled', !overHero && (window.scrollY > 4 || currentHash() !== 'inicio'));
 }
 window.addEventListener('scroll', updateNavBg, { passive: true });
 
@@ -1125,7 +1408,27 @@ $('#country').addEventListener('change', (e) => {
 window.addEventListener('hashchange', () => route());
 
 // Ajustes e celular
-const OPT_MAP = { optProxy: 'proxy', optHd: 'hd', optExtra: 'extra', optNsfw: 'nsfw' };
+const OPT_MAP = { optProxy: 'proxy', optHd: 'hd', optExtra: 'extra', optNsfw: 'nsfw', optLive: 'livePreviews', optHeroVideo: 'heroVideo' };
+
+function applyTheme() {
+  const t = ['light', 'dark', 'auto'].includes(state.settings.theme) ? state.settings.theme : 'light';
+  document.documentElement.dataset.theme = t;
+  const dark = t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  $('meta[name="theme-color"]').setAttribute('content', dark ? '#000000' : '#f5f5f7');
+  $$('#themeSeg button').forEach((b) => {
+    b.classList.toggle('on', b.dataset.themeOpt === t);
+    b.setAttribute('aria-checked', String(b.dataset.themeOpt === t));
+  });
+}
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
+$('#themeSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-theme-opt]');
+  if (!b) return;
+  state.settings.theme = b.dataset.themeOpt;
+  saveSettings();
+  applyTheme();
+});
 $('#connectBtn').addEventListener('click', openConnect);
 $('#closeConnect').addEventListener('click', () => closeSheet('#connect'));
 $('#settingsBtn').addEventListener('click', () => {
@@ -1139,6 +1442,8 @@ for (const [el, key] of Object.entries(OPT_MAP)) {
   $('#' + el).addEventListener('change', (e) => {
     state.settings[key] = e.target.checked;
     saveSettings();
+    if (key === 'heroVideo') return e.target.checked ? scheduleHeroVideo() : stopHeroVideo();
+    if (key === 'livePreviews' && !e.target.checked) { thumbs.queue.length = 0; thumbs.queued.clear(); }
     if (key !== 'proxy') route(true);
   });
 }

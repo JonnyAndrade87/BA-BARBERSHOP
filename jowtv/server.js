@@ -42,6 +42,13 @@ const DEFAULT_UA =
 // ---------------------------------------------------------------------------
 
 let catalog = null; // { json: Buffer, gzip: Buffer, updatedAt: number, etag: string }
+let catalogIds = new Set();
+
+// Miniaturas ao vivo (quadros capturados pelos navegadores e compartilhados entre os aparelhos)
+const THUMB_TTL_MS = 15 * 60 * 1000;
+const THUMB_MAX = 1500;
+const THUMB_MAX_BYTES = 400 * 1024;
+const thumbs = new Map(); // id -> { buf, t }
 let building = null;
 
 async function fetchJson(file) {
@@ -145,6 +152,7 @@ async function buildCatalog() {
 }
 
 function setCatalog(data) {
+  catalogIds = new Set(data.channels.map((c) => c.id));
   const json = Buffer.from(JSON.stringify(data));
   catalog = {
     json,
@@ -302,6 +310,42 @@ async function handleProxy(req, res, query) {
 // HTTP
 // ---------------------------------------------------------------------------
 
+function handleThumb(req, res, id) {
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    const t = thumbs.get(id);
+    if (!t || Date.now() - t.t > THUMB_TTL_MS) {
+      if (t) thumbs.delete(id);
+      res.writeHead(204, { 'Cache-Control': 'no-store' }); // ainda não há miniatura deste canal
+      return res.end();
+    }
+    res.writeHead(200, {
+      'Content-Type': 'image/jpeg',
+      'Content-Length': t.buf.length,
+      'Cache-Control': 'no-store',
+      'X-Thumb-Age': String(Math.round((Date.now() - t.t) / 1000)),
+    });
+    return res.end(req.method === 'HEAD' ? undefined : t.buf);
+  }
+  if (req.method !== 'POST') return sendText(res, 405, 'Método não permitido');
+  if (!catalogIds.has(id) && !id.startsWith('extra-')) return sendText(res, 404, 'Canal desconhecido');
+  if (!/^image\/jpeg\b/.test(req.headers['content-type'] || '')) return sendText(res, 415, 'Envie image/jpeg');
+  const chunks = [];
+  let size = 0;
+  req.on('data', (c) => {
+    size += c.length;
+    if (size > THUMB_MAX_BYTES) { req.destroy(); return; }
+    chunks.push(c);
+  });
+  req.on('end', () => {
+    const buf = Buffer.concat(chunks);
+    if (buf.length < 500 || buf[0] !== 0xff || buf[1] !== 0xd8) return sendText(res, 400, 'Imagem inválida');
+    thumbs.delete(id);
+    thumbs.set(id, { buf, t: Date.now() });
+    while (thumbs.size > THUMB_MAX) thumbs.delete(thumbs.keys().next().value); // remove as mais antigas
+    sendText(res, 204, '');
+  });
+}
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -352,6 +396,8 @@ const server = http.createServer(async (req, res) => {
       });
       return res.end(gz ? cat.gzip : cat.json);
     }
+
+    if (url.pathname === '/api/thumb') return handleThumb(req, res, url.searchParams.get('id') || '');
 
     if (url.pathname === '/api/info') {
       const addresses = lanAddresses().map((a) => ({ ...a, url: `http://${a.address}:${PORT}` }));

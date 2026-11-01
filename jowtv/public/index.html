@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#f5f5f7">
+  <script>try{var s=JSON.parse(localStorage.getItem("iptv:settings")||"{}");document.documentElement.dataset.theme=s.theme||"light"}catch(e){document.documentElement.dataset.theme="light"}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>JOWTV</title>
@@ -58,7 +59,7 @@
   </nav>
 
   <!-- Player -->
-  <div class="player" id="player" hidden role="dialog" aria-modal="true" aria-label="Player">
+  <div class="player on-dark" id="player" hidden role="dialog" aria-modal="true" aria-label="Player">
     <video id="video" playsinline autoplay></video>
     <div class="pl-shade" aria-hidden="true"></div>
     <div class="pl-status" id="videoStatus" role="status"></div>
@@ -133,6 +134,19 @@
       <div class="sheet-head">
         <h2>Ajustes</h2>
         <button class="sheet-done" id="closeSettings">OK</button>
+      </div>
+      <div class="group-title">Aparência</div>
+      <div class="group">
+        <div class="segmented" id="themeSeg" role="radiogroup" aria-label="Aparência">
+          <button data-theme-opt="light" role="radio">Claro</button>
+          <button data-theme-opt="dark" role="radio">Escuro</button>
+          <button data-theme-opt="auto" role="radio">Automático</button>
+        </div>
+      </div>
+      <div class="group-title">Prévias ao vivo</div>
+      <div class="group">
+        <label class="toggle-row"><span>Imagem ao vivo nas miniaturas<small>Captura um quadro do que está passando em cada canal visível. Usa mais internet.</small></span><input type="checkbox" id="optLive"><i></i></label>
+        <label class="toggle-row"><span>Vídeo no destaque<small>Mostra o canal em destaque ao vivo, sem som</small></span><input type="checkbox" id="optHeroVideo"><i></i></label>
       </div>
       <div class="group-title">Reprodução</div>
       <div class="group">

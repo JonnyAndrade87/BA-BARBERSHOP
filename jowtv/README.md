@@ -36,8 +36,12 @@ Não precisa instalar nenhuma dependência (sem `npm install`).
 
 ## Recursos
 
-- Visual inspirado no tvOS: fundo preto, vidro fosco, carrossel de destaques em tela cheia e prateleiras de
-  cards com efeito de foco (o card cresce, inclina e brilha)
+- Visual inspirado no tvOS: vidro fosco, carrossel de destaques em tela cheia e prateleiras de cards com efeito
+  de foco (o card cresce, inclina e brilha). Tema **claro** (fundo `#f5f5f7`, padrão), **escuro** ou **automático**
+- **Imagem ao vivo nas miniaturas:** o JOWTV captura um quadro do que está passando em cada canal visível na tela
+  e mostra no card. As capturas ficam guardadas no servidor por 15 minutos e são compartilhadas entre os aparelhos
+- **Vídeo ao vivo no destaque** (sem som), como os trailers do Apple TV
+- As prévias usam internet extra; dá para desligar em Ajustes → Prévias ao vivo
 - Prateleiras: Continuar assistindo, Minha lista, Brasil, Portugal, Filmes, Séries, Esportes, Notícias, Infantil…
 - Todas as categorias, filtro por país (180+ países) e busca com sugestões
 - Player em tela cheia com controles próprios que se escondem sozinhos: canal anterior/próximo, pausar,
