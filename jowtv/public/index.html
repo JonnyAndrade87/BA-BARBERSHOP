@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#0b0d12">
-  <title>IPTV Player</title>
+  <title>JOWTV</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="app.css">
@@ -13,7 +13,7 @@
   <header class="topbar">
     <a class="brand" href="#inicio" aria-label="Início">
       <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="7" width="26" height="18" rx="4" fill="currentColor"/><path d="M13 12.5v7l6-3.5z" fill="#0b0d12"/><path d="M11 3l5 4 5-4" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-      <span>IPTV<b>Player</b></span>
+      <span>JOW<b>TV</b></span>
     </a>
     <nav class="tabs" id="tabs" aria-label="Seções"></nav>
     <div class="tools">
@@ -22,6 +22,9 @@
         <input id="search" type="search" placeholder="Buscar canal..." autocomplete="off" aria-label="Buscar canal">
       </label>
       <select id="country" aria-label="País"><option value="">🌍 Todos os países</option></select>
+      <button class="icon-btn phone-btn" id="connectBtn" title="Assistir no celular / TV" aria-label="Assistir no celular ou TV">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
       <button class="icon-btn" id="settingsBtn" title="Configurações" aria-label="Configurações">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" stroke="currentColor" stroke-width="2" fill="none"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
       </button>
@@ -83,10 +86,19 @@
     </div>
   </div>
 
+  <!-- Assistir no celular / TV -->
+  <div class="modal" id="connect" hidden role="dialog" aria-modal="true" aria-label="Assistir no celular ou TV">
+    <div class="modal-box connect-box">
+      <button class="icon-btn close" id="closeConnect" title="Fechar" aria-label="Fechar">✕</button>
+      <h2>📱 Assistir no celular ou TV</h2>
+      <div class="connect-body" id="connectBody"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
-  <script>window.Hls || document.write('<script src="https://unpkg.com/hls.js@1/dist/hls.min.js"><\/script>')</script>
+  <script src="vendor/hls.min.js"></script>
+  <script src="vendor/qrcode.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

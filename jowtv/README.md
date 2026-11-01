@@ -1,4 +1,4 @@
-# IPTV Player
+# JOWTV
 
 Aplicação com interface para assistir aos mais de 10 mil canais abertos de TV ao vivo do projeto
 [iptv-org](https://github.com/iptv-org/iptv): filmes, séries, esportes, notícias, infantil, música e mais.
@@ -19,16 +19,20 @@ Não precisa instalar nenhuma dependência (sem `npm install`).
 
 ## Abrir no celular / TV
 
-Com o servidor rodando, a janela do terminal mostra um endereço assim:
+1. Deixe o JOWTV rodando no PC (a janela preta precisa ficar aberta).
+2. No PC, abra o JOWTV e clique no **ícone do celular 📱** no topo. A página inicial também mostra um
+   **QR code**.
+3. Com o celular no **mesmo Wi-Fi** do PC, aponte a câmera para o QR code e toque no link.
+   (Ou digite o endereço que aparece embaixo do QR code, por exemplo `http://192.168.X.X:8080`.)
+4. No celular, use **"Adicionar à tela inicial"** para o JOWTV virar um ícone de app.
 
-```
-Celular / TV (Wi-Fi): http://192.168.0.15:8080
-```
+### Não abriu no celular?
 
-Digite esse endereço no navegador do celular ou da TV (precisa estar no mesmo Wi-Fi).
-No celular, use **"Adicionar à tela inicial"** para ele virar um ícone de app.
-
-> Se não abrir, libere o Node.js no firewall do Windows quando ele perguntar (rede privada).
+- **Windows:** dê dois cliques em `liberar-firewall.bat` e aceite o pedido de administrador. Ele libera a
+  porta 8080 no Firewall do Windows (redes privadas e públicas). Depois feche e abra o `iniciar.bat` de novo.
+- Confirme que o celular está no Wi-Fi (não nos dados móveis) e na mesma rede do PC, sem "rede de convidados".
+- Desligue VPNs no PC e no celular.
+- Se aparecer mais de um endereço, teste os outros listados na janela do QR code.
 
 ## Recursos
 
@@ -39,6 +43,7 @@ No celular, use **"Adicionar à tela inicial"** para ele virar um ícone de app.
 - Player com várias fontes por canal e troca automática quando uma fonte falha
 - Setas ← → (ou Channel Up/Down do controle) para trocar de canal; `F` para tela cheia; `Esc` para fechar
 - Botão "Copiar link" para abrir o canal no VLC
+- QR code para abrir no celular / TV com um toque
 - Configurações: só HD, conteúdo adulto (desligado por padrão), streams não catalogados, proxy
 
 ## Como funciona
@@ -48,7 +53,9 @@ No celular, use **"Adicionar à tela inicial"** para ele virar um ícone de app.
 - O servidor também funciona como **proxy dos streams** (`/proxy?url=...`). Isso faz muito mais canais
   funcionarem no navegador, porque resolve bloqueios de CORS e envia os cabeçalhos User-Agent / Referer
   que alguns canais exigem.
-- A interface (`public/`) usa [hls.js](https://github.com/video-dev/hls.js) para tocar os streams HLS.
+- A interface (`public/`) usa [hls.js](https://github.com/video-dev/hls.js) para tocar os streams HLS e
+  [qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator) para o QR code. As duas bibliotecas
+  vêm junto na pasta `public/vendor/`, sem depender de CDN.
 
 ## Observações
 

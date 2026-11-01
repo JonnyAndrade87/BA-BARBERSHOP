@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * IPTV Player — servidor local
+ * JOWTV — servidor local
  *
  * - Baixa o catálogo público do iptv-org (canais, streams, logos, categorias, países)
  *   e monta um JSON compacto em /api/catalog.
@@ -353,6 +353,12 @@ const server = http.createServer(async (req, res) => {
       return res.end(gz ? cat.gzip : cat.json);
     }
 
+    if (url.pathname === '/api/info') {
+      const addresses = lanAddresses().map((a) => ({ ...a, url: `http://${a.address}:${PORT}` }));
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
+      return res.end(JSON.stringify({ name: 'JOWTV', port: PORT, lanEnabled: HOST !== '127.0.0.1' && HOST !== 'localhost', addresses }));
+    }
+
     if (url.pathname === '/api/refresh' && req.method === 'POST') {
       await refreshCatalog();
       return sendText(res, 200, 'ok');
@@ -366,19 +372,37 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+// Placas de rede virtuais (VPN, WSL, VirtualBox, Docker...) não servem para o celular
+const VIRTUAL_IFACE = /vethernet|virtual|vmware|vbox|docker|wsl|hyper-v|tailscale|zerotier|hamachi|loopback|br-|veth|utun|tun|tap/i;
+
 function lanAddresses() {
   const out = [];
-  for (const list of Object.values(os.networkInterfaces())) {
-    for (const i of list || []) if (i.family === 'IPv4' && !i.internal) out.push(i.address);
+  for (const [iface, list] of Object.entries(os.networkInterfaces())) {
+    for (const i of list || []) {
+      if (i.family !== 'IPv4' && i.family !== 4) continue;
+      if (i.internal || i.address.startsWith('169.254.')) continue;
+      let score = 0;
+      if (i.address.startsWith('192.168.')) score += 3;
+      else if (i.address.startsWith('10.')) score += 2;
+      else if (/^172\.(1[6-9]|2\d|3[01])\./.test(i.address)) score += 1;
+      if (VIRTUAL_IFACE.test(iface)) score -= 5;
+      if (/wi-?fi|wlan|wireless|ethernet|^en\d|^eth\d/i.test(iface)) score += 1;
+      out.push({ address: i.address, iface, score });
+    }
   }
-  return out;
+  return out.sort((a, b) => b.score - a.score).map(({ address, iface, score }) => ({ address, iface, likely: score > 0 }));
 }
 
 loadCachedCatalog();
 server.listen(PORT, HOST, () => {
-  console.log('\n  IPTV Player rodando!\n');
-  console.log(`  Neste computador:   http://localhost:${PORT}`);
-  for (const ip of lanAddresses()) console.log(`  Celular / TV (Wi-Fi): http://${ip}:${PORT}`);
-  console.log('\n  Para parar: Ctrl+C\n');
+  const lan = HOST === '127.0.0.1' || HOST === 'localhost' ? [] : lanAddresses();
+  console.log('\n  JOWTV rodando!\n');
+  console.log(`  Neste computador:      http://localhost:${PORT}`);
+  if (lan.length) {
+    console.log(`  Celular / TV (Wi-Fi):  http://${lan[0].address}:${PORT}   <- use este`);
+    for (const a of lan.slice(1)) console.log(`  Outros endereços:      http://${a.address}:${PORT}  (${a.iface})`);
+    console.log('\n  Dica: abra o JOWTV no PC e clique no ícone do celular para ver o QR code.');
+  }
+  console.log('\n  Não feche esta janela enquanto estiver assistindo. Para parar: Ctrl+C\n');
   if (!catalog || Date.now() - catalog.updatedAt > CACHE_TTL_MS) refreshCatalog().catch(() => {});
 });

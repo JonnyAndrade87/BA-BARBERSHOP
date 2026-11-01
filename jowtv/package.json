@@ -1,7 +1,7 @@
 {
-  "name": "iptv-player",
+  "name": "jowtv",
   "version": "1.0.0",
-  "description": "Player de TV ao vivo com os canais públicos do iptv-org",
+  "description": "JOWTV - TV ao vivo com os canais públicos do iptv-org",
   "main": "server.js",
   "scripts": { "start": "node server.js" },
   "engines": { "node": ">=18" },

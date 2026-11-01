@@ -1,6 +1,6 @@
 {
-  "name": "IPTV Player",
-  "short_name": "IPTV",
+  "name": "JOWTV",
+  "short_name": "JOWTV",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b0d12",

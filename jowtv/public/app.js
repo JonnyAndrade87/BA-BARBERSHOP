@@ -1,4 +1,4 @@
-/* IPTV Player — interface */
+/* JOWTV — interface */
 'use strict';
 
 // ---------------------------------------------------------------------------
@@ -53,7 +53,10 @@ const state = {
   sort: 'az',
   grid: { list: [], pos: 0 },
   playlist: [], // ids para navegar entre canais no player
+  info: null, // endereços de rede do servidor (para abrir no celular)
 };
+
+const IS_LOCAL_PC = ['localhost', '127.0.0.1', '::1', '[::1]'].includes(location.hostname);
 
 const $ = (s, el = document) => el.querySelector(s);
 const main = $('#main');
@@ -184,6 +187,7 @@ function renderHome() {
       <div><b>${fmt(vis.filter((c) => c.k.includes('movies')).length)}</b><span>canais de filmes</span></div>
       <div><b>${fmt(vis.filter((c) => c.k.includes('sports')).length)}</b><span>canais de esportes</span></div>
     </div>
+    ${heroQrHtml()}
   </section>`;
 
   const recent = state.recent.map((id) => state.byId.get(id)).filter((c) => c && visible(c));
@@ -219,6 +223,117 @@ function renderCategories() {
     </a>`).join('')}</div>`;
   window.scrollTo(0, 0);
 }
+
+// ---------------------------------------------------------------------------
+// Assistir no celular / TV (QR code)
+// ---------------------------------------------------------------------------
+
+function qrSvg(text) {
+  if (!window.qrcode) return '';
+  try {
+    const q = qrcode(0, 'M');
+    q.addData(text);
+    q.make();
+    return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true, alt: 'QR code para ' + text });
+  } catch { return ''; }
+}
+
+async function loadInfo() {
+  try {
+    const r = await fetch('api/info');
+    if (r.ok) state.info = await r.json();
+  } catch { /* servidor antigo ou offline */ }
+  return state.info;
+}
+
+function connectTarget() {
+  if (!IS_LOCAL_PC) return location.origin;
+  const a = state.info && state.info.addresses;
+  return a && a.length ? a[0].url : '';
+}
+
+function heroQrHtml() {
+  if (!IS_LOCAL_PC || store.get('hideHeroQr', false)) return '';
+  const url = connectTarget();
+  if (!url) return '';
+  return `<div class="hero-qr">
+    <button class="hero-qr-close" data-action="hide-hero-qr" title="Esconder" aria-label="Esconder">✕</button>
+    <div class="qr">${qrSvg(url)}</div>
+    <div>
+      <b>📱 Assista no celular</b>
+      <span>Aponte a câmera do celular para o código (mesmo Wi-Fi).</span>
+      <code>${esc(url.replace('http://', ''))}</code>
+      <button class="btn small" data-action="open-connect">Mais opções</button>
+    </div>
+  </div>`;
+}
+
+function renderConnect(selected) {
+  const body = $('#connectBody');
+  const info = state.info;
+  const addrs = IS_LOCAL_PC ? (info && info.addresses) || [] : [{ url: location.origin, address: location.host }];
+
+  if (IS_LOCAL_PC && info && info.lanEnabled === false) {
+    body.innerHTML = `<p class="muted">O servidor foi iniciado só para este computador (HOST=127.0.0.1).
+      Inicie normalmente com <code>iniciar.bat</code> ou <code>node server.js</code> para liberar o acesso pela rede.</p>`;
+    return;
+  }
+  if (!addrs.length) {
+    body.innerHTML = `<p class="muted">${info ? 'Nenhuma conexão de rede encontrada neste computador. Conecte o PC ao Wi-Fi ou ao cabo de rede e reabra esta janela.'
+      : 'Não foi possível consultar o servidor. Reinicie o JOWTV (feche a janela preta e abra o iniciar.bat de novo).'}</p>`;
+    return;
+  }
+
+  const url = selected || addrs[0].url;
+  const others = addrs.filter((a) => a.url !== url);
+  body.innerHTML = `
+    ${IS_LOCAL_PC ? '' : '<p class="muted" style="margin-top:0">Você já está acessando o JOWTV pela rede. Para abrir em <b>outro aparelho</b>, use o código ou o endereço abaixo.</p>'}
+    <div class="connect-main">
+      <div class="qr big">${qrSvg(url)}</div>
+      <ol class="steps">
+        <li>Conecte o celular ou a TV no <b>mesmo Wi-Fi</b> deste computador.</li>
+        <li>Abra a <b>câmera</b> do celular e aponte para o código. Toque no link que aparecer.</li>
+        <li>Ou digite no navegador:</li>
+      </ol>
+    </div>
+    <div class="connect-url">
+      <code id="connectUrl">${esc(url)}</code>
+      <button class="btn" data-action="copy-url" data-url="${esc(url)}">Copiar</button>
+    </div>
+    ${others.length ? `<div class="connect-others"><span>Não abriu? Tente outro endereço deste PC:</span>
+      <div class="chips">${others.map((a) => `<button class="chip" data-action="pick-url" data-url="${esc(a.url)}">${esc(a.address)}${a.iface ? ` <small>${esc(a.iface)}</small>` : ''}</button>`).join('')}</div></div>` : ''}
+    <details class="connect-help">
+      <summary>Abriu nada no celular? Veja o que fazer</summary>
+      <ul>
+        <li><b>Mantenha a janela preta aberta</b> no PC. Se ela fechar, o JOWTV para.</li>
+        <li><b>Firewall do Windows:</b> dê dois cliques em <code>liberar-firewall.bat</code> (na pasta do JOWTV) e aceite o pedido de administrador. Depois feche e abra o <code>iniciar.bat</code>.</li>
+        <li>O celular precisa estar no <b>Wi-Fi</b> (não nos dados móveis) e na mesma rede do PC — evite a “rede de convidados”.</li>
+        <li>Desligue VPNs no PC e no celular.</li>
+        <li>Digite o endereço com <code>http://</code> e com <code>:${esc(String((info && info.port) || location.port || 8080))}</code> no final.</li>
+      </ul>
+    </details>`;
+}
+
+async function openConnect() {
+  $('#connect').hidden = false;
+  $('#connectBody').innerHTML = '<div class="spinner" style="margin:30px auto"></div>';
+  if (IS_LOCAL_PC) await loadInfo();
+  renderConnect();
+}
+
+document.addEventListener('click', async (e) => {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.dataset.action;
+  if (action === 'open-connect') openConnect();
+  else if (action === 'pick-url') renderConnect(el.dataset.url);
+  else if (action === 'copy-url') toast((await copyText(el.dataset.url)) ? 'Endereço copiado!' : 'Não foi possível copiar');
+  else if (action === 'hide-hero-qr') {
+    store.set('hideHeroQr', true);
+    el.closest('.hero-qr').remove();
+    toast('Você pode abrir o QR code pelo ícone 📱 no topo');
+  }
+});
 
 function emptyHtml(msg) {
   return `<div class="empty"><b>Nenhum canal encontrado</b>${msg || 'Tente outro país, outra busca ou ajuste as configurações.'}</div>`;
@@ -533,7 +648,8 @@ $('#copyBtn').addEventListener('click', async () => {
 document.addEventListener('keydown', (e) => {
   const inPlayer = !$('#player').hidden;
   if (e.key === 'Escape') {
-    if (!$('#settings').hidden) $('#settings').hidden = true;
+    if (!$('#connect').hidden) $('#connect').hidden = true;
+    else if (!$('#settings').hidden) $('#settings').hidden = true;
     else if (inPlayer && !document.fullscreenElement) closePlayer();
     return;
   }
@@ -568,6 +684,10 @@ window.addEventListener('hashchange', () => {
 
 // Configurações
 const OPT_MAP = { optProxy: 'proxy', optHd: 'hd', optExtra: 'extra', optNsfw: 'nsfw' };
+$('#connectBtn').addEventListener('click', openConnect);
+$('#closeConnect').addEventListener('click', () => { $('#connect').hidden = true; });
+$('#connect').addEventListener('click', (e) => { if (e.target.id === 'connect') $('#connect').hidden = true; });
+
 $('#settingsBtn').addEventListener('click', () => {
   for (const [el, key] of Object.entries(OPT_MAP)) $('#' + el).checked = !!state.settings[key];
   $('#catalogInfo').textContent = state.updatedAt
@@ -645,7 +765,8 @@ async function loadCatalog() {
   route();
 }
 
-loadCatalog().catch((err) => {
+// No PC, busca os endereços de rede antes de desenhar a página inicial (para o QR code)
+(IS_LOCAL_PC ? loadInfo() : Promise.resolve()).then(() => loadCatalog()).catch((err) => {
   console.error(err);
   main.innerHTML = `<div class="empty"><b>Não foi possível carregar os canais</b>
     Verifique sua conexão com a internet e se o servidor (<code>node server.js</code>) está rodando.<br><br>
