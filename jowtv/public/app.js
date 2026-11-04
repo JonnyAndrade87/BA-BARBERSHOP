@@ -30,14 +30,25 @@ const CATEGORY_HUE = {
   shop: 345, relax: 180, interactive: 280, xxx: 355,
 };
 // Abas da barra superior
-const NAV_TABS = [['inicio', 'Início'], ['todos', 'Ao vivo'], ['cat-movies', 'Filmes'], ['cat-series', 'Séries'],
-  ['cat-sports', 'Esportes'], ['cat-kids', 'Infantil'], ['categorias', 'Categorias'],
-  ['hackers', 'Cinema hacker'], ['favoritos', 'Minha lista']];
+const NAV_TABS = [['inicio', 'Início'], ['todos', 'Ao vivo'], ['futebol', 'Futebol'], ['cat-movies', 'Filmes'], ['cat-series', 'Séries'],
+  ['cat-sports', 'Esportes'], ['cat-kids', 'Infantil'], ['cat-news', 'Notícias'], ['categorias', 'Categorias'],
+  ['favoritos', 'Minha lista']];
 // Prateleiras da página inicial
 const HOME_ROWS = ['movies', 'series', 'sports', 'news', 'kids', 'animation', 'music', 'documentary',
   'comedy', 'entertainment', 'classic', 'culture'];
-const SEARCH_SUGGESTIONS = ['Globo', 'Record', 'SBT', 'Band', 'CNN', 'ESPN', 'Cultura', 'Jovem Pan',
+const SEARCH_SUGGESTIONS = ['Globo', 'Record', 'SBT', 'Band', 'CNN', 'FIFA', 'Cultura', 'Jovem Pan',
   'Disney', 'Cartoon', 'Pluto', 'Rede Vida', 'RTP', 'SIC', 'Fox', 'MTV', 'Discovery', 'Euronews'];
+
+// Futebol: TV aberta brasileira (onde passam jogos de graça) e canais de futebol/clubes.
+// Canais pagos (ESPN, SporTV, Premiere, Sport TV…) ficam de fora: os links deles no iptv-org
+// são retransmissões não autorizadas.
+const FOOTBALL_OPEN_BR = ['RedeGlobo.br', 'TVGloboSaoPaulo.br', 'TVGloboBrasilia.br', 'Band.br', 'Record.br',
+  'RecordTVSaoPaulo.br', 'RecordTVRio.br', 'SBTNacional.br', 'CazeTV.br', 'NSports.br', 'TVBrasil.br', 'TVCultura.br'];
+const FOOTBALL_CHANNELS = ['FIFAPlus.uk', 'FIFAPlusWomen.uk', 'CBSSportsGolazoNetwork.us', 'GolazoNetwork.us',
+  'RealMadridTV.es', 'RealMadridTVEnglish.es', 'MilanTV.it', 'InterTV.it', 'SevillaFCTV.es', 'CanaldoInter.br',
+  'PortoCanal.pt', 'SportitaliaSolocalcio.it', 'RadioTVSerieA.it', 'FutbolTV.uz', 'Futbol.tj'];
+const FOOTBALL_NAME = /fut(e|é)?bol|f[uú]tbol|football|soccer|calcio|golazo/i;
+const PAY_TV = /espn|sportv|premiere|sport ?tv ?\d|sport tv\+|okko|match!|win\+|storm|combate|dazn|bein|sky sport|tnt sports|star\+/i;
 
 const PAGE_SIZE = 48;
 const ROW_SIZE = 24;
@@ -67,8 +78,6 @@ const state = {
   playlist: [], // ids para navegar entre canais no player
   info: null, // endereços de rede do servidor (para abrir no celular)
   hero: { ids: [], idx: 0, timer: null },
-  hackers: null, // catálogo "Cinema hacker" (lista movies-for-hackers)
-  movies: new Map(), // id -> título do catálogo
   lastFocusId: null,
 };
 
@@ -260,7 +269,7 @@ function renderTabs(active) {
   $('#tabs').innerHTML = NAV_TABS
     .map(([h, label]) => `<a href="#${h}" class="${h === active ? 'active' : ''}">${esc(label)}</a>`)
     .join('');
-  const tabKey = active.startsWith('cat-') || active.startsWith('pais-') || active === 'hackers' ? 'categorias' : active === 'recentes' ? 'inicio' : active;
+  const tabKey = active.startsWith('cat-') || active.startsWith('pais-') || active === 'futebol' ? 'categorias' : active === 'recentes' ? 'inicio' : active;
   $$('#tabbar a').forEach((a) => a.classList.toggle('active', a.dataset.tab === tabKey));
   const el = $('#tabs .active');
   if (el) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -373,7 +382,8 @@ function renderHome() {
 
   html += shelfHtml('Continuar assistindo', idsToChannels(state.recent).slice(0, ROW_SIZE), 'recentes', { live: true });
   html += shelfHtml('Minha lista', idsToChannels([...state.favs]).slice(0, ROW_SIZE), 'favoritos');
-  html += `<div data-slot="hackers-home">${hackersHomeShelf()}</div>`;
+  const fb = footballLists();
+  html += shelfHtml('Futebol', fb.open.concat(fb.clubs).slice(0, ROW_SIZE), 'futebol', { count: fb.open.length + fb.clubs.length });
 
   if (!state.country) {
     const br = vis.filter((c) => c.c === 'BR').sort(rank);
@@ -411,7 +421,7 @@ function renderCategories() {
   const cats = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
   main.innerHTML = `<div class="page">
     <div class="page-head"><div><h1 class="large-title">Categorias</h1><p class="subtitle">${cats.length} categorias${state.country ? ' · ' + esc(countryName(state.country)) : ''}</p></div></div>
-    ${cats.length ? `<div class="tiles">${hackersTileHtml()}${cats.map((k) => tileHtml(k, counts[k])).join('')}</div>` : emptyHtml()}
+    ${cats.length ? `<div class="tiles">${footballTileHtml()}${cats.map((k) => tileHtml(k, counts[k])).join('')}</div>` : emptyHtml()}
   </div>`;
 }
 
@@ -493,168 +503,53 @@ function updateSearchResults() {
     return;
   }
   const list = searchResults(state.query);
-  const movies = searchMovies(state.query);
-  if (!list.length && !movies.length) {
-    box.innerHTML = emptyHtml(`Nada encontrado para “${state.query}”`, 'Confira a ortografia ou tente outro nome de canal ou filme.');
+  if (!list.length) {
+    box.innerHTML = emptyHtml(`Nada encontrado para “${state.query}”`, 'Confira a ortografia ou tente outro nome de canal.');
     return;
   }
-  box.innerHTML = `${movies.length ? `<div class="search-movies">${posterShelfHtml('Cinema hacker', movies, 'hackers', { flush: true })}</div>` : ''}
-    ${list.length ? `<div class="section-title">${fmt(list.length)} cana${list.length > 1 ? 'is' : 'l'}</div><div id="resultsGrid"></div>` : ''}`;
-  if (list.length) mountGrid($('#resultsGrid'), list);
+  box.innerHTML = `<div class="section-title">${fmt(list.length)} resultado${list.length > 1 ? 's' : ''}</div><div id="resultsGrid"></div>`;
+  mountGrid($('#resultsGrid'), list);
 }
 
 // ---------------------------------------------------------------------------
-// Cinema hacker (lista "Movies For Hackers", github.com/k4m4/movies-for-hackers, CC0)
+// Futebol
 // ---------------------------------------------------------------------------
-// É um catálogo: a lista não tem vídeos. Cada título mostra capa, sinopse e onde assistir legalmente.
 
-let hackersLoading = null;
-function loadHackers() {
-  if (state.hackers) return Promise.resolve(state.hackers);
-  if (!hackersLoading) {
-    hackersLoading = fetch('api/hackers')
-      .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then((data) => {
-        state.hackers = data;
-        state.movies = new Map();
-        for (const sec of data.sections) for (const m of sec.items) {
-          m._sec = sec.id;
-          m._s = norm(m.t);
-          if (!state.movies.has(m.id)) state.movies.set(m.id, m);
-        }
-        fillHackerSlots();
-        return data;
-      })
-      .catch((err) => { hackersLoading = null; console.warn('Cinema hacker indisponível:', err.message); return null; });
-  }
-  return hackersLoading;
+function footballLists() {
+  // o filtro de país não se aplica aqui: a seção já é uma seleção
+  const ok = (c) => c && visible(c, true) && !PAY_TV.test(c.n);
+  const open = FOOTBALL_OPEN_BR.map((id) => state.byId.get(id)).filter(ok);
+  const seen = new Set(open.map((c) => c.id));
+  const curated = FOOTBALL_CHANNELS.map((id) => state.byId.get(id)).filter(ok);
+  const found = state.channels.filter((c) => !c.e && c.k.includes('sports') && FOOTBALL_NAME.test(c.n) && ok(c)).sort(rank);
+  const clubs = [];
+  for (const c of curated.concat(found)) if (!seen.has(c.id)) { seen.add(c.id); clubs.push(c); }
+  return { open, clubs };
 }
 
-function allMovies() { return [...state.movies.values()]; }
-function topMovies(n) {
-  return allMovies().filter((m) => m.r).sort((a, b) => (b.p ? 1 : 0) - (a.p ? 1 : 0) || b.r - a.r).slice(0, n);
-}
-function movieMeta(m) {
-  return [m.y, m.g.slice(0, 2).join(', ')].filter(Boolean).join(' · ');
-}
-function searchMovies(q) {
-  if (!state.movies.size || !q) return [];
-  const nq = norm(q);
-  return allMovies().filter((m) => m._s.includes(nq) || m.g.some((g) => norm(g).includes(nq)))
-    .sort((a, b) => (b._s.startsWith(nq) ? 1 : 0) - (a._s.startsWith(nq) ? 1 : 0) || (b.r || 0) - (a.r || 0));
-}
-
-function posterArtHtml(m, big = false) {
-  const fallback = `<div class="poster-fallback"><span class="pf-prompt">&gt;_</span><b>${esc(m.t)}</b><small>${esc(m.y || '')}</small></div>`;
-  return `<div class="poster-art${big ? ' big' : ''}" style="--h:${hueFor(m.t)}">
-    ${fallback}
-    ${m.p ? `<img src="${esc(m.p)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
-    ${m.r ? `<span class="imdb">IMDb ${m.r.toFixed(1)}</span>` : ''}
-    ${m.tv ? '<span class="kind">SÉRIE</span>' : ''}
-    <span class="shine"></span>
-  </div>`;
-}
-
-function posterHtml(m) {
-  return `<button class="poster" data-movie="${esc(m.id)}" aria-label="${esc(m.t)}">
-    ${posterArtHtml(m)}
-    <div class="cap"><div class="name">${esc(m.t)}</div><div class="meta">${esc(movieMeta(m))}</div></div>
-  </button>`;
-}
-
-function posterShelfHtml(title, list, link, opts = {}) {
-  if (!list.length) return '';
-  const head = link ? `<h2 class="sr"><a href="#${link}">${esc(title)}${ICON.chevron}</a></h2>` : `<h2>${esc(title)}</h2>`;
-  return `<section class="shelf poster-shelf${opts.flush ? ' flush' : ''}">
-    <div class="shelf-head">${head}${opts.note ? `<span class="count">${esc(opts.note)}</span>` : ''}</div>
-    <button class="shelf-nav prev" data-scroll="-1" tabindex="-1" aria-label="Anterior">${ICON.chevronL}</button>
-    <div class="shelf-scroll">${list.map(posterHtml).join('')}</div>
-    <button class="shelf-nav next" data-scroll="1" tabindex="-1" aria-label="Próximo">${ICON.chevron}</button>
-  </section>`;
-}
-
-function hackersHomeShelf() {
-  if (!state.movies.size) return '';
-  return posterShelfHtml('Cinema hacker', topMovies(24), 'hackers', { note: `${state.movies.size} títulos` });
-}
-
-function hackersTileHtml() {
-  return `<a class="tile tile-hacker" href="#hackers">
-    <span class="tile-emoji" aria-hidden="true">💻</span>
-    <span class="tile-name">Cinema hacker</span>
-    <span class="tile-count">${state.movies.size ? `${state.movies.size} filmes e séries` : 'Filmes e séries sobre hackers'}</span>
+function footballTileHtml() {
+  const fb = footballLists();
+  return `<a class="tile tile-football" href="#futebol">
+    <span class="tile-emoji" aria-hidden="true">⚽</span>
+    <span class="tile-name">Futebol</span>
+    <span class="tile-count">${fmt(fb.open.length + fb.clubs.length)} canais</span>
   </a>`;
 }
 
-function fillHackerSlots() {
-  $$('[data-slot="hackers-home"]').forEach((el) => { el.innerHTML = hackersHomeShelf(); });
-  if (currentHash() === 'hackers') renderHackers();
-  if (currentHash() === 'categorias') $$('.tile-hacker .tile-count').forEach((el) => { el.textContent = `${state.movies.size} filmes e séries`; });
-  if (currentHash() === 'buscar' && state.query) updateSearchResults();
-}
-
-function renderHackers() {
+function renderFootball() {
   stopHero();
-  const data = state.hackers;
-  if (!data) {
-    main.innerHTML = `<div class="page"><div class="loading" style="height:50vh"><div class="spinner"></div><p>Carregando o catálogo…</p></div></div>`;
-    loadHackers().then((d) => { if (!d && currentHash() === 'hackers') main.innerHTML = `<div class="page">${emptyHtml('Catálogo indisponível', 'Não foi possível baixar a lista agora. Verifique a internet e tente de novo.')}</div>`; });
-    return;
-  }
-  const count = state.movies.size;
-  main.innerHTML = `<div class="page hackers-page">
-    <div class="page-head">
-      <div>
-        <h1 class="large-title">Cinema hacker</h1>
-        <p class="subtitle">${count} filmes, documentários e séries que todo hacker deveria ver</p>
-      </div>
+  const fb = footballLists();
+  const total = fb.open.length + fb.clubs.length;
+  main.innerHTML = `<div class="page">
+      <div class="page-head"><div>
+        <h1 class="large-title">Futebol</h1>
+        <p class="subtitle">${fmt(total)} canais · TV aberta do Brasil, FIFA+ e canais de clubes</p>
+      </div></div>
+      <p class="note-box">${ICON.tv}<span>Os jogos passam ao vivo nesses canais quando estão na programação deles, como na TV. Canais pagos (ESPN, SporTV, Premiere…) não estão aqui.</span></p>
     </div>
-    <p class="hackers-note">${ICON.tv}<span>Este catálogo indica <b>o que assistir</b>; os títulos não passam no JOWTV. Toque em um deles e use <b>Onde assistir</b> para ver em quais serviços está disponível no Brasil.</span></p>
-  </div>
-  ${posterShelfHtml('Mais bem avaliados', topMovies(20))}
-  ${data.sections.map((sec) => posterShelfHtml(sec.name, sec.items.slice().sort((a, b) => (b.r || 0) - (a.r || 0)), null, { note: `${sec.items.length} títulos` })).join('')}
-  <p class="credits">Lista <a href="${esc(data.source)}" target="_blank" rel="noopener">Movies For Hackers</a> (${esc(data.license)}), notas do IMDb${data.enriched ? ', capas e sinopses da Wikipédia' : ''}.</p>`;
-}
-
-function movieLinks(m) {
-  const q = encodeURIComponent(m.t);
-  return {
-    justwatch: `https://www.justwatch.com/br/busca?q=${q}`,
-    trailer: `https://www.youtube.com/results?search_query=${encodeURIComponent(`${m.t} ${m.y || ''} trailer`)}`,
-    imdb: m.imdb,
-    wiki: m.w,
-  };
-}
-
-function openMovie(id) {
-  const m = state.movies.get(id);
-  if (!m) return;
-  const l = movieLinks(m);
-  const sec = state.hackers.sections.find((s) => s.id === m._sec);
-  $('#movieBox').innerHTML = `
-    <div class="movie-backdrop" style="--h:${hueFor(m.t)}">${m.p ? `<img src="${esc(m.p)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</div>
-    <button class="sheet-done movie-close" data-close-sheet aria-label="Fechar">${ICON.x}</button>
-    <div class="movie-main">
-      <div class="movie-poster">${posterArtHtml(m, true)}</div>
-      <div class="movie-info">
-        <div class="eyebrow">${m.tv ? 'Série' : sec && sec.id === 'docs' ? 'Documentário' : 'Filme'} · Cinema hacker</div>
-        <h2>${esc(m.t)}</h2>
-        <div class="movie-meta">
-          ${m.y ? `<span>${m.y}</span>` : ''}
-          ${m.g.length ? `<span>${esc(m.g.join(', '))}</span>` : ''}
-          ${m.r ? `<span class="imdb-badge">IMDb <b>${m.r.toFixed(1)}</b></span>` : ''}
-        </div>
-        <p class="movie-plot">${m.s ? esc(m.s) : 'Sinopse indisponível.'}${m.s && m.sl === 'en' ? ' <small>(sinopse em inglês)</small>' : ''}</p>
-        <div class="movie-actions">
-          <a class="btn-play" href="${esc(l.justwatch)}" target="_blank" rel="noopener">${ICON.play}Onde assistir</a>
-          <a class="pill-btn" href="${esc(l.trailer)}" target="_blank" rel="noopener">Trailer</a>
-          <a class="pill-btn" href="${esc(l.imdb)}" target="_blank" rel="noopener">IMDb</a>
-          ${l.wiki ? `<a class="pill-btn" href="${esc(l.wiki)}" target="_blank" rel="noopener">Wikipédia</a>` : ''}
-        </div>
-        <p class="movie-hint">“Onde assistir” abre o JustWatch, que mostra em quais streamings brasileiros (Netflix, Prime Video, Max…) o título está disponível, inclusive opções gratuitas.</p>
-      </div>
-    </div>`;
-  openSheet('#movieSheet');
+    ${shelfHtml('TV aberta no Brasil', fb.open, null, { count: fb.open.length })}
+    ${shelfHtml('Canais de futebol e clubes', fb.clubs, null, { count: fb.clubs.length })}
+    ${total ? '' : `<div class="page">${emptyHtml('Nenhum canal de futebol disponível', 'Tente atualizar o catálogo em Ajustes.')}</div>`}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -673,7 +568,7 @@ function route(keepScroll = false) {
   if (hash === 'inicio') renderHome();
   else if (hash === 'todos') renderGrid('Ao vivo', visibleList());
   else if (hash === 'categorias') renderCategories();
-  else if (hash === 'hackers') renderHackers();
+  else if (hash === 'futebol') renderFootball();
   else if (hash === 'buscar') renderSearch();
   else if (hash === 'favoritos') {
     renderGrid('Minha lista', idsToChannels([...state.favs]), { keepOrder: true, emptyTitle: 'Sua lista está vazia', empty: 'Abra um canal e toque em ＋ para adicioná-lo aqui.' });
@@ -1385,7 +1280,7 @@ function moveFocus(dir) {
   if (!list.includes(cur)) {
     const first = list.find((el) => {
       const r = el.getBoundingClientRect();
-      return r.top >= 60 && r.bottom <= innerHeight && (el.matches('.card, .btn-play, .tile, .poster') || scope !== document.body);
+      return r.top >= 60 && r.bottom <= innerHeight && (el.matches('.card, .btn-play, .tile') || scope !== document.body);
     }) || list[0];
     first.focus();
     return;
@@ -1506,10 +1401,9 @@ function updateNavBg() {
 window.addEventListener('scroll', updateNavBg, { passive: true });
 
 document.addEventListener('click', async (e) => {
-  const el = e.target.closest('[data-action], [data-play], [data-fav], [data-slide], [data-slide-step], [data-scroll], [data-sort], [data-suggest], [data-movie], .card[data-id]');
+  const el = e.target.closest('[data-action], [data-play], [data-fav], [data-slide], [data-slide-step], [data-scroll], [data-sort], [data-suggest], .card[data-id]');
   if (!el) return;
 
-  if (el.dataset.movie) return openMovie(el.dataset.movie);
   if (el.matches('.card[data-id]')) {
     const row = el.closest('[data-list]');
     const playlist = row ? row.dataset.list.split('|') : state.grid.list.map((c) => c.id);
@@ -1604,7 +1498,6 @@ $('#settingsBtn').addEventListener('click', () => {
   openSheet('#settings');
 });
 $('#closeSettings').addEventListener('click', () => closeSheet('#settings'));
-$('#movieSheet').addEventListener('click', (e) => { if (e.target.closest('[data-close-sheet]')) closeSheet('#movieSheet'); });
 $$('.sheet').forEach((s) => s.addEventListener('click', (e) => { if (e.target === s) closeSheet('#' + s.id); }));
 for (const [el, key] of Object.entries(OPT_MAP)) {
   $('#' + el).addEventListener('change', (e) => {
@@ -1678,7 +1571,6 @@ async function loadCatalog() {
 }
 
 // No PC, busca os endereços de rede antes de desenhar a página inicial (para o QR code)
-loadHackers();
 (IS_LOCAL_PC ? loadInfo() : Promise.resolve()).then(() => loadCatalog()).catch((err) => {
   console.error(err);
   main.innerHTML = `<div class="page">${emptyHtml('Não foi possível carregar os canais',

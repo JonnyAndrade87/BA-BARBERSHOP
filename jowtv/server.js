@@ -20,7 +20,6 @@ const path = require('path');
 const os = require('os');
 const zlib = require('zlib');
 const { Readable } = require('stream');
-const { buildHackers } = require('./hackers');
 
 const PORT = Number(process.env.PORT) || 8080;
 const HOST = process.env.HOST || '0.0.0.0'; // 0.0.0.0 = acessível pelo celular/TV na mesma rede
@@ -50,13 +49,6 @@ const THUMB_TTL_MS = 15 * 60 * 1000;
 const THUMB_MAX = 1500;
 const THUMB_MAX_BYTES = 400 * 1024;
 const thumbs = new Map(); // id -> { buf, t }
-
-// Cinema hacker (lista movies-for-hackers + capas da Wikipédia)
-const HACKERS_FILE = path.join(CACHE_DIR, 'hackers.json');
-const HACKERS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // atualiza a lista toda semana
-const HACKERS_RETRY_MS = 60 * 60 * 1000; // se as capas falharem, tenta de novo em 1 hora
-let hackers = null; // { json: Buffer, gzip: Buffer, data }
-let hackersBuilding = null;
 let building = null;
 
 async function fetchJson(file) {
@@ -157,47 +149,6 @@ async function buildCatalog() {
   };
   console.log(`Catálogo pronto: ${out.length} canais, ${streams.length} streams.`);
   return data;
-}
-
-function setHackers(data) {
-  const json = Buffer.from(JSON.stringify(data));
-  hackers = { json, gzip: zlib.gzipSync(json), data };
-}
-
-function refreshHackers() {
-  if (hackersBuilding) return hackersBuilding;
-  hackersBuilding = (async () => {
-    try {
-      const data = await buildHackers((msg) => console.log('  ' + msg));
-      // não troca um catálogo com capas por um sem capas
-      if (!data.enriched && hackers && hackers.data.enriched) {
-        hackers.data.checkedAt = Date.now();
-        return;
-      }
-      setHackers(data);
-      fs.mkdirSync(CACHE_DIR, { recursive: true });
-      fs.writeFileSync(HACKERS_FILE, hackers.json);
-    } catch (err) {
-      console.error('Cinema hacker: erro ao baixar a lista:', err.message);
-      if (!hackers) throw err;
-    } finally {
-      hackersBuilding = null;
-    }
-  })();
-  return hackersBuilding;
-}
-
-async function getHackers() {
-  if (!hackers) {
-    try { setHackers(JSON.parse(fs.readFileSync(HACKERS_FILE, 'utf8'))); } catch { /* sem cache */ }
-  }
-  if (!hackers) await refreshHackers();
-  else {
-    const d = hackers.data;
-    const age = Date.now() - (d.checkedAt || d.updatedAt);
-    if (age > HACKERS_TTL_MS || (!d.enriched && age > HACKERS_RETRY_MS)) refreshHackers().catch(() => {});
-  }
-  return hackers;
 }
 
 function setCatalog(data) {
@@ -447,17 +398,6 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (url.pathname === '/api/thumb') return handleThumb(req, res, url.searchParams.get('id') || '');
-
-    if (url.pathname === '/api/hackers') {
-      const h = await getHackers();
-      const gz = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
-      res.writeHead(200, {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        ...(gz ? { 'Content-Encoding': 'gzip' } : {}),
-      });
-      return res.end(gz ? h.gzip : h.json);
-    }
 
     if (url.pathname === '/api/info') {
       const addresses = lanAddresses().map((a) => ({ ...a, url: `http://${a.address}:${PORT}` }));

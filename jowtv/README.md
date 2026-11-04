@@ -45,11 +45,10 @@ Não precisa instalar nenhuma dependência (sem `npm install`).
 - **Vídeo ao vivo no destaque** (sem som), como os trailers do Apple TV
 - As prévias usam internet extra; dá para desligar em Ajustes → Prévias ao vivo
 - Prateleiras: Continuar assistindo, Minha lista, Brasil, Portugal, Filmes, Séries, Esportes, Notícias, Infantil…
+- **Futebol:** TV aberta do Brasil (Globo, Band, Record, SBT, CazéTV, TV Brasil, TV Cultura…), FIFA+, Golazo
+  Network e canais de clubes (Real Madrid TV, Milan TV, Inter TV, Canal do Inter, Porto Canal…). Canais pagos
+  como ESPN, SporTV e Premiere não entram, porque os links deles no iptv-org não são autorizados
 - Todas as categorias, filtro por país (180+ países) e busca com sugestões
-- **Cinema hacker:** catálogo com os ~120 filmes, documentários e séries da lista
-  [Movies For Hackers](https://github.com/k4m4/movies-for-hackers) (CC0), com nota do IMDb, e capa e sinopse
-  da Wikipédia. A lista não tem vídeos: cada título traz os botões **Onde assistir** (JustWatch Brasil),
-  **Trailer** e **IMDb**
 - Player em tela cheia com controles próprios que se escondem sozinhos: canal anterior/próximo, pausar,
   volume, Picture-in-Picture, tela cheia, Minha lista e lista de fontes do sinal
 - Troca automática de fonte quando uma falha
