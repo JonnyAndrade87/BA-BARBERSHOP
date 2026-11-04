@@ -439,6 +439,15 @@ function lanAddresses() {
   return out.sort((a, b) => b.score - a.score).map(({ address, iface, score }) => ({ address, iface, likely: score > 0 }));
 }
 
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n  A porta ${PORT} já está em uso: provavelmente o JOWTV já está aberto em outra janela do Terminal.`);
+    console.error('  Feche a outra janela (ou rode: lsof -ti :' + PORT + ' | xargs kill) e abra o JOWTV de novo.\n');
+    process.exit(1);
+  }
+  throw err;
+});
+
 loadCachedCatalog();
 server.listen(PORT, HOST, () => {
   const lan = HOST === '127.0.0.1' || HOST === 'localhost' ? [] : lanAddresses();
